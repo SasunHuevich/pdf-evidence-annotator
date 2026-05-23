@@ -13,3 +13,10 @@ curl http://localhost:6333/collections
 ```sh
 curl http://localhost:6333/collections/documents
 ```
+
+#### Запросы в бэк
+```sh
+curl -X POST "http://localhost:3000/qdrant_evidence_regions" \
+     -H "Content-Type: application/json" \
+     -d '{"file_name": "tacl_a_00660.pdf"}'
+```

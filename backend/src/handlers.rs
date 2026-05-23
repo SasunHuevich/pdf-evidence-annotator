@@ -2,12 +2,13 @@ use axum::{
     Json,
     body::Body,
     extract::State,
-    http::{HeaderValue, Method, Request, Response},
+    http::{HeaderValue, Method, Request, Response, StatusCode},
     middleware::Next,
     response::IntoResponse,
 };
+use serde::Deserialize;
 
-use crate::AppState;
+use crate::{AppState, qdrant};
 
 pub async fn cors_middleware(req: Request<Body>, next: Next) -> Response<Body> {
     if req.method() == Method::OPTIONS {
@@ -41,5 +42,36 @@ pub async fn cors_middleware(req: Request<Body>, next: Next) -> Response<Body> {
 }
 
 pub async fn get_pdf_list(State(state): State<AppState>) -> impl IntoResponse {
-    Json(&*state.names).into_response()
+    Json(
+        state
+            .names_to_hashes
+            .keys()
+            .cloned()
+            .collect::<Vec<String>>(),
+    )
+    .into_response()
+}
+
+#[derive(Deserialize)]
+pub struct FileNameRequest {
+    pub file_name: String,
+}
+
+pub async fn get_evidence_regoins_by_file_name(
+    State(state): State<AppState>,
+    Json(payload): Json<FileNameRequest>,
+) -> impl IntoResponse {
+    let file_hash = match state.names_to_hashes.get(&payload.file_name) {
+        Some(hash) => hash,
+        None => return (StatusCode::NOT_FOUND, "Файл не найден").into_response(),
+    };
+
+    match qdrant::qdrant_get_evidense_regions_by_file_name(&state.qdrant_client, file_hash).await {
+        Ok(regions) => Json(regions).into_response(),
+        Err(err) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Ошибка базы: {}", err),
+        )
+            .into_response(),
+    }
 }

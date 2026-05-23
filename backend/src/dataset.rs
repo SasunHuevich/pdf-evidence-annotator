@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::{collections::HashSet, path::Path};
+use std::{collections::HashMap, path::Path};
 use tokio::{fs::File, io::AsyncReadExt};
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -10,6 +10,7 @@ pub struct EvidenceRegions {
     pub region_id: i32,
     pub page: i32,
     pub bbox: Vec<Bbox>,
+    pub r#type: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -41,12 +42,47 @@ pub async fn read_dataset_from_file(path: &str) -> Result<Vec<Sample>, Box<dyn s
     Ok(dataset)
 }
 
-pub fn get_filenames(dataset: &[Sample]) -> HashSet<String> {
-    let mut names = HashSet::new();
+async fn calculate_real_file_hash<P: AsRef<Path>>(path: P) -> Result<String, std::io::Error> {
+    let mut file = File::open(path).await?;
+    let mut context = md5::Context::new();
+    let mut buffer = [0u8; 16384]; // Фиксированный буфер: не забивает RAM сервера
 
-    for sample in dataset {
-        names.insert(sample.doc_id.clone());
+    loop {
+        let bytes_read = file.read(&mut buffer).await?;
+        if bytes_read == 0 {
+            break;
+        }
+        context.consume(&buffer[..bytes_read]);
     }
 
-    names
+    let digest = context.compute();
+    Ok(format!("{:x}", digest))
+}
+
+pub async fn get_filenames_to_hashes(
+    dataset: &[Sample],
+    docs_dir: &str,
+) -> HashMap<String, String> {
+    let mut names_to_hashes = HashMap::new();
+
+    for sample in dataset {
+        if !names_to_hashes.contains_key(&sample.doc_id) {
+            let file_path = Path::new(docs_dir).join(&sample.doc_id);
+
+            match calculate_real_file_hash(&file_path).await {
+                Ok(hash) => {
+                    names_to_hashes.insert(sample.doc_id.clone(), hash);
+                }
+                Err(err) => {
+                    println!(
+                        "Ошибка (пропуск файла): {}. Проверьте путь: {:?}",
+                        err, file_path
+                    );
+                    continue;
+                }
+            }
+        }
+    }
+
+    names_to_hashes
 }
