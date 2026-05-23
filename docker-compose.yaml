@@ -30,10 +30,11 @@ services:
     depends_on:
       - qdrant
     environment:
-      - DATABASE_URL=postgresql://user:pass@db:5432/db
       - RUST_LOG=info
     ports:
       - "3000:3000"
+    volumes:
+      - ./data:/data
     logging:
       driver: "json-file"
       options:

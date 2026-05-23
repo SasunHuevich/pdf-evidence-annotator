@@ -1,5 +1,5 @@
 FROM debian:bullseye-slim
 
-COPY target/release/ta-backend ./back
+COPY target/release/pdf-evidence-annotator pdf-evidence-annotator
 
-CMD ["./back"]
+CMD ["./pdf-evidence-annotator"]
