@@ -1,0 +1,12 @@
+services:
+  builder:
+    container_name: builder
+    image: rust:1.95-bullseye
+    working_dir: /back
+    volumes:
+      - .:/back
+      - cargo_registry:/usr/local/cargo/registry
+    command: cargo build --release
+
+volumes:
+  cargo_registry:
