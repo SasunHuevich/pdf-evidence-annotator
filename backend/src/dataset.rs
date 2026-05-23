@@ -2,10 +2,10 @@ use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::Path};
 use tokio::{fs::File, io::AsyncReadExt};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Bbox(pub i32, pub i32, pub i32, pub i32);
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct EvidenceRegions {
     pub region_id: i32,
     pub page: i32,
@@ -55,7 +55,7 @@ async fn calculate_real_file_hash<P: AsRef<Path>>(path: P) -> Result<String, std
         context.consume(&buffer[..bytes_read]);
     }
 
-    let digest = context.compute();
+    let digest = context.finalize();
     Ok(format!("{:x}", digest))
 }
 

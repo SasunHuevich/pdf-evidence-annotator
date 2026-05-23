@@ -66,6 +66,10 @@ async fn main() {
             "/qdrant_evidence_regions",
             post(handlers::get_evidence_regoins_by_file_name),
         )
+        .route(
+            "/json_evidence_regions",
+            post(handlers::get_json_evidence_regions_by_file_name),
+        )
         .layer(from_fn(handlers::cors_middleware))
         .with_state(state);
 

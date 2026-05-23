@@ -75,3 +75,29 @@ pub async fn get_evidence_regoins_by_file_name(
             .into_response(),
     }
 }
+
+pub async fn get_json_evidence_regions_by_file_name(
+    State(state): State<AppState>,
+    Json(payload): Json<FileNameRequest>,
+) -> impl IntoResponse {
+    let dataset_guard = state.dataset.read().await;
+
+    let mut accumulated_regions = Vec::new();
+
+    for sample in dataset_guard.iter() {
+        if sample.doc_id == payload.file_name {
+            if let Some(regions) = &sample.evidence_regions {
+                accumulated_regions.extend(regions.clone());
+            }
+        }
+    }
+
+    if !state.names_to_hashes.contains_key(&payload.file_name) {
+        return (
+            StatusCode::NOT_FOUND,
+            "Запрошенный документ не найден в датасете",
+        )
+            .into_response();
+    }
+    Json(accumulated_regions).into_response()
+}
