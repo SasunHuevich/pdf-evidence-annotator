@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::path::Path;
+use std::{collections::HashSet, path::Path};
 use tokio::{fs::File, io::AsyncReadExt};
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -39,4 +39,14 @@ pub async fn read_dataset_from_file(path: &str) -> Result<Vec<Sample>, Box<dyn s
     let dataset: Vec<Sample> = serde_json::from_str(&contents)?;
 
     Ok(dataset)
+}
+
+pub fn get_filenames(dataset: &[Sample]) -> HashSet<String> {
+    let mut names = HashSet::new();
+
+    for sample in dataset {
+        names.insert(sample.doc_id.clone());
+    }
+
+    names
 }
