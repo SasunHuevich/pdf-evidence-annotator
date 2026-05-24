@@ -1,12 +1,13 @@
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::Path};
 use tokio::{fs::File, io::AsyncReadExt};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, ToSchema)]
 pub struct Bbox(pub i32, pub i32, pub i32, pub i32);
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, ToSchema)]
 pub struct EvidenceRegions {
     pub region_id: i32,
     pub page: i32,
@@ -14,7 +15,7 @@ pub struct EvidenceRegions {
     pub r#type: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, ToSchema)]
 pub struct Sample {
     #[serde(default)]
     pub question_id: Option<String>,

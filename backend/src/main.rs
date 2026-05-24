@@ -12,6 +12,8 @@ use axum::{
 use qdrant_client::Qdrant;
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::RwLock;
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 
 type DatasetState = Arc<RwLock<Vec<Sample>>>;
 
@@ -19,12 +21,37 @@ static DATASET_FILE_PATH: &str = "data/samples.json";
 pub static OUTPUT_DATASET_FILE_PATH: &str = "data/output.sample.json";
 static DOCS_DIRECTORY: &str = "data/documents";
 
-#[derive(Clone, FromRef)] // Макрос Clone ОБЯЗАТЕЛЕН для состояний Axum!
+#[derive(Clone, FromRef)]
 pub struct AppState {
     pub dataset: Arc<RwLock<Vec<Sample>>>,
     pub names_to_hashes: Arc<HashMap<String, String>>,
     pub qdrant_client: Qdrant,
 }
+
+#[derive(OpenApi)]
+#[openapi(
+    paths(
+        handlers::get_pdf_list,
+        handlers::get_evidence_regoins_by_file_name,
+        handlers::get_json_evidence_regions_by_file_name,
+        handlers::get_pdf_by_file_name,
+        handlers::get_dataset_by_file_name,
+        handlers::save_evidence_regions
+    ),
+    components(
+        schemas(
+            handlers::FileNameRequest,
+            handlers::SaveEvidenceRequest,
+            dataset::Sample,
+            dataset::EvidenceRegions,
+            dataset::Bbox
+        )
+    ),
+    tags(
+        (name = "PDF Evidence Annotator", description = "Инструмент для разметки документов")
+    )
+)]
+struct ApiDoc;
 
 #[tokio::main]
 async fn main() {
@@ -93,9 +120,11 @@ async fn main() {
             "/save_evidence_regions",
             post(handlers::save_evidence_regions),
         )
+        .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
         .layer(from_fn(handlers::cors_middleware))
         .with_state(state);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+
     axum::serve(listener, app).await.unwrap();
 }

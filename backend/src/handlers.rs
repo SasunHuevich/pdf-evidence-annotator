@@ -7,9 +7,10 @@ use axum::{
     response::IntoResponse,
 };
 use futures_util::StreamExt;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use tokio::fs::File;
 use tokio_util::io::ReaderStream;
+use utoipa::ToSchema;
 
 use crate::{
     AppState, OUTPUT_DATASET_FILE_PATH,
@@ -48,6 +49,13 @@ pub async fn cors_middleware(req: Request<Body>, next: Next) -> Response<Body> {
     response
 }
 
+#[utoipa::path(
+    get,
+    path = "/pdf_list",
+    responses(
+        (status = OK, description = "Список имен файлов успешно получен", body = Vec<String>)
+    )
+)]
 pub async fn get_pdf_list(State(state): State<AppState>) -> impl IntoResponse {
     Json(
         state
@@ -59,11 +67,21 @@ pub async fn get_pdf_list(State(state): State<AppState>) -> impl IntoResponse {
     .into_response()
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct FileNameRequest {
     pub file_name: String,
 }
 
+#[utoipa::path(
+    post,
+    path = "/qdrant_evidence_regions",
+    request_body = FileNameRequest,
+    responses(
+        (status = OK, description = "Регионы из Qdrant успешно получены"),
+        (status = NOT_FOUND, description = "Указанный файл не найден в маппинге хешей"),
+        (status = INTERNAL_SERVER_ERROR, description = "Внутренняя ошибка при обращении к базе Qdrant")
+    )
+)]
 pub async fn get_evidence_regoins_by_file_name(
     State(state): State<AppState>,
     Json(payload): Json<FileNameRequest>,
@@ -83,6 +101,15 @@ pub async fn get_evidence_regoins_by_file_name(
     }
 }
 
+#[utoipa::path(
+    post,
+    path = "/json_evidence_regions",
+    request_body = FileNameRequest,
+    responses(
+        (status = OK, description = "Массив регионов успешно сформирован"),
+        (status = NOT_FOUND, description = "Запрошенный документ отсутствует в датасете")
+    )
+)]
 pub async fn get_json_evidence_regions_by_file_name(
     State(state): State<AppState>,
     Json(payload): Json<FileNameRequest>,
@@ -109,6 +136,15 @@ pub async fn get_json_evidence_regions_by_file_name(
     Json(accumulated_regions).into_response()
 }
 
+#[utoipa::path(
+    post,
+    path = "/get_pdf",
+    request_body = FileNameRequest,
+    responses(
+        (status = OK, description = "Бинарный поток PDF-файла", content_type = "application/pdf"),
+        (status = NOT_FOUND, description = "Файл физически не найден на диске сервера")
+    )
+)]
 pub async fn get_pdf_by_file_name(Json(payload): Json<FileNameRequest>) -> impl IntoResponse {
     let path = format!("./data/documents/{}", &payload.file_name);
 
@@ -121,11 +157,19 @@ pub async fn get_pdf_by_file_name(Json(payload): Json<FileNameRequest>) -> impl 
 
     Response::builder()
         .status(StatusCode::OK)
-        .header(header::CONTENT_TYPE, "appliction/pdf")
+        .header(header::CONTENT_TYPE, "application/pdf")
         .body(Body::from_stream(stream))
         .unwrap()
 }
 
+#[utoipa::path(
+    post,
+    path = "/get_dataset",
+    request_body = FileNameRequest,
+    responses(
+        (status = OK, description = "Список отфильтрованных объектов Sample успешно получен")
+    )
+)]
 pub async fn get_dataset_by_file_name(
     State(state): State<AppState>,
     Json(payload): Json<FileNameRequest>,
@@ -140,11 +184,22 @@ pub async fn get_dataset_by_file_name(
     Json(filtered)
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, ToSchema)]
 pub struct SaveEvidenceRequest {
     pub question_id: String,
     pub evidence_regions: Vec<dataset::EvidenceRegions>,
 }
+
+#[utoipa::path(
+    post,
+    path = "/save_evidence_regions",
+    request_body = SaveEvidenceRequest,
+    responses(
+        (status = OK, description = "Регионы успешно обновлены в памяти и сохранены на диск"),
+        (status = NOT_FOUND, description = "Указанный question_id не найден в текущем датасете"),
+        (status = INTERNAL_SERVER_ERROR, description = "Ошибка сериализации данных или сбой асинхронной записи файла на диск")
+    )
+)]
 pub async fn save_evidence_regions(
     State(state): State<AppState>,
     Json(payload): Json<SaveEvidenceRequest>,
