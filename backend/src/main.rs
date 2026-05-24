@@ -71,6 +71,7 @@ async fn main() {
             post(handlers::get_json_evidence_regions_by_file_name),
         )
         .route("/get_pdf", post(handlers::get_pdf_by_file_name))
+        .route("/get_dataset", post(handlers::get_dataset_by_file_name))
         .layer(from_fn(handlers::cors_middleware))
         .with_state(state);
 

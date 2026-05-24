@@ -11,7 +11,7 @@ use serde::Deserialize;
 use tokio::fs::File;
 use tokio_util::io::ReaderStream;
 
-use crate::{AppState, qdrant};
+use crate::{AppState, dataset::Sample, qdrant};
 
 pub async fn cors_middleware(req: Request<Body>, next: Next) -> Response<Body> {
     if req.method() == Method::OPTIONS {
@@ -120,4 +120,18 @@ pub async fn get_pdf_by_file_name(Json(payload): Json<FileNameRequest>) -> impl 
         .header(header::CONTENT_TYPE, "appliction/pdf")
         .body(Body::from_stream(stream))
         .unwrap()
+}
+
+pub async fn get_dataset_by_file_name(
+    State(state): State<AppState>,
+    Json(payload): Json<FileNameRequest>,
+) -> Json<Vec<Sample>> {
+    let dataset_guard = state.dataset.read().await;
+    let filtered: Vec<Sample> = dataset_guard
+        .iter()
+        .filter(|sample| sample.doc_id == payload.file_name)
+        .cloned()
+        .collect();
+
+    Json(filtered)
 }

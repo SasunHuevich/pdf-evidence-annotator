@@ -13,7 +13,7 @@ pub struct EvidenceRegions {
     pub r#type: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Sample {
     pub doc_id: String,
     pub doc_type: String,
