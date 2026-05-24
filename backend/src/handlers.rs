@@ -2,11 +2,14 @@ use axum::{
     Json,
     body::Body,
     extract::State,
-    http::{HeaderValue, Method, Request, Response, StatusCode},
+    http::{HeaderValue, Method, Request, Response, StatusCode, header},
     middleware::Next,
     response::IntoResponse,
 };
+use futures_util::StreamExt;
 use serde::Deserialize;
+use tokio::fs::File;
+use tokio_util::io::ReaderStream;
 
 use crate::{AppState, qdrant};
 
@@ -100,4 +103,21 @@ pub async fn get_json_evidence_regions_by_file_name(
             .into_response();
     }
     Json(accumulated_regions).into_response()
+}
+
+pub async fn get_pdf_by_file_name(Json(payload): Json<FileNameRequest>) -> impl IntoResponse {
+    let path = format!("./data/documents/{}", &payload.file_name);
+
+    let file = match File::open(&path).await {
+        Ok(f) => f,
+        Err(_) => return (StatusCode::NOT_FOUND, "File not found").into_response(),
+    };
+
+    let stream = ReaderStream::new(file).map(|bytes| bytes.into());
+
+    Response::builder()
+        .status(StatusCode::OK)
+        .header(header::CONTENT_TYPE, "appliction/pdf")
+        .body(Body::from_stream(stream))
+        .unwrap()
 }

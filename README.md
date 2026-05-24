@@ -20,3 +20,10 @@ curl -X POST "http://localhost:3000/qdrant_evidence_regions" \
      -H "Content-Type: application/json" \
      -d '{"file_name": "tacl_a_00660.pdf"}'
 ```
+
+```sh
+curl -X POST "http://localhost:3000/get_pdf" \
+     -H "Content-Type: application/json" \
+     -d '{"file_name": "PH_2016.06.08_Economy-Final.pdf"}' \
+     -o "downloaded_document.pdf"
+```
