@@ -11,7 +11,11 @@ use serde::Deserialize;
 use tokio::fs::File;
 use tokio_util::io::ReaderStream;
 
-use crate::{AppState, dataset::Sample, qdrant};
+use crate::{
+    AppState, OUTPUT_DATASET_FILE_PATH,
+    dataset::{self, Sample},
+    qdrant,
+};
 
 pub async fn cors_middleware(req: Request<Body>, next: Next) -> Response<Body> {
     if req.method() == Method::OPTIONS {
@@ -125,7 +129,7 @@ pub async fn get_pdf_by_file_name(Json(payload): Json<FileNameRequest>) -> impl 
 pub async fn get_dataset_by_file_name(
     State(state): State<AppState>,
     Json(payload): Json<FileNameRequest>,
-) -> Json<Vec<Sample>> {
+) -> impl IntoResponse {
     let dataset_guard = state.dataset.read().await;
     let filtered: Vec<Sample> = dataset_guard
         .iter()
@@ -134,4 +138,46 @@ pub async fn get_dataset_by_file_name(
         .collect();
 
     Json(filtered)
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct SaveEvidenceRequest {
+    pub question_id: String,
+    pub evidence_regions: Vec<dataset::EvidenceRegions>,
+}
+pub async fn save_evidence_regions(
+    State(state): State<AppState>,
+    Json(payload): Json<SaveEvidenceRequest>,
+) -> impl IntoResponse {
+    let mut dataset_guard = state.dataset.write().await;
+
+    let sample_opt = dataset_guard
+        .iter_mut()
+        .find(|sample| sample.question_id.as_deref() == Some(&payload.question_id));
+
+    let sample = match sample_opt {
+        Some(s) => s,
+        None => return (StatusCode::NOT_FOUND, "Question ID not found").into_response(),
+    };
+
+    sample.evidence_regions = Some(payload.evidence_regions);
+
+    let dataset_to_save = dataset_guard.clone();
+
+    drop(dataset_guard);
+
+    let json_string = match serde_json::to_string_pretty(&dataset_to_save) {
+        Ok(json) => json,
+        Err(e) => {
+            eprintln!("Ошибка сериализации JSON: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, "Serialization error").into_response();
+        }
+    };
+
+    if let Err(e) = tokio::fs::write(OUTPUT_DATASET_FILE_PATH, json_string).await {
+        eprintln!("Ошибка записи на диск: {}", e);
+        return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to write file").into_response();
+    }
+
+    (StatusCode::OK, "Evidence regions overwritten successfully").into_response()
 }

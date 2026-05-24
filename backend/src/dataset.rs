@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::Path};
 use tokio::{fs::File, io::AsyncReadExt};
+use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Bbox(pub i32, pub i32, pub i32, pub i32);
@@ -15,6 +16,9 @@ pub struct EvidenceRegions {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Sample {
+    #[serde(default)]
+    pub question_id: Option<String>,
+
     pub doc_id: String,
     pub doc_type: String,
     pub question: String,
@@ -42,10 +46,44 @@ pub async fn read_dataset_from_file(path: &str) -> Result<Vec<Sample>, Box<dyn s
     Ok(dataset)
 }
 
+pub async fn add_uuid_to_dataset(mut dataset: Vec<Sample>, file_path: &str) -> Vec<Sample> {
+    let mut modified = false;
+
+    for sample in &mut dataset {
+        if sample.question_id.is_none() {
+            sample.question_id = Some(Uuid::new_v4().to_string());
+            modified = true;
+        }
+    }
+
+    if modified {
+        match serde_json::to_string_pretty(&dataset) {
+            Ok(json_string) => {
+                if let Err(e) = tokio::fs::write(file_path, json_string).await {
+                    eprintln!(
+                        "Предупреждение: Не удалось перезаписать файл датасета с UUID: {}",
+                        e
+                    );
+                } else {
+                    println!(
+                        "Успех: Исходный файл обновлен. Всем записям проставлен уникальный question_id."
+                    );
+                }
+            }
+            Err(e) => eprintln!(
+                "Предупреждение: Ошибка сериализации при сохранении UUID: {}",
+                e
+            ),
+        }
+    }
+
+    dataset
+}
+
 async fn calculate_real_file_hash<P: AsRef<Path>>(path: P) -> Result<String, std::io::Error> {
     let mut file = File::open(path).await?;
     let mut context = md5::Context::new();
-    let mut buffer = [0u8; 16384]; // Фиксированный буфер: не забивает RAM сервера
+    let mut buffer = [0u8; 16384];
 
     loop {
         let bytes_read = file.read(&mut buffer).await?;

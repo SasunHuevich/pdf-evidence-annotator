@@ -15,6 +15,10 @@ use tokio::sync::RwLock;
 
 type DatasetState = Arc<RwLock<Vec<Sample>>>;
 
+static DATASET_FILE_PATH: &str = "data/samples.json";
+pub static OUTPUT_DATASET_FILE_PATH: &str = "data/output.sample.json";
+static DOCS_DIRECTORY: &str = "data/documents";
+
 #[derive(Clone, FromRef)] // Макрос Clone ОБЯЗАТЕЛЕН для состояний Axum!
 pub struct AppState {
     pub dataset: Arc<RwLock<Vec<Sample>>>,
@@ -24,21 +28,34 @@ pub struct AppState {
 
 #[tokio::main]
 async fn main() {
-    let dataset_file_path = "data/samples.json";
-    let docs_directory = "data/documents";
+    let file_to_load = if tokio::fs::try_exists(OUTPUT_DATASET_FILE_PATH)
+        .await
+        .unwrap_or(false)
+    {
+        println!(
+            "Найден ранее сохраненный файл: {}",
+            OUTPUT_DATASET_FILE_PATH
+        );
+        OUTPUT_DATASET_FILE_PATH
+    } else {
+        println!("Загрузка исходного датасета: {}", DATASET_FILE_PATH);
+        DATASET_FILE_PATH
+    };
 
-    let dataset = match dataset::read_dataset_from_file(dataset_file_path).await {
+    let dataset = match dataset::read_dataset_from_file(file_to_load).await {
         Ok(data) => data,
         Err(error) => {
             panic!("Критическая ошибка: {}", error)
         }
     };
 
+    let dataset = dataset::add_uuid_to_dataset(dataset, OUTPUT_DATASET_FILE_PATH).await;
+
     let shared_dataset: DatasetState = Arc::new(RwLock::new(dataset));
 
     let dataset_guard = shared_dataset.read().await;
     let shared_names_to_hashes =
-        Arc::new(dataset::get_filenames_to_hashes(&dataset_guard, docs_directory).await);
+        Arc::new(dataset::get_filenames_to_hashes(&dataset_guard, DOCS_DIRECTORY).await);
     drop(dataset_guard);
 
     let qdrant_url = "http://qdrant:6334";
@@ -72,6 +89,10 @@ async fn main() {
         )
         .route("/get_pdf", post(handlers::get_pdf_by_file_name))
         .route("/get_dataset", post(handlers::get_dataset_by_file_name))
+        .route(
+            "/save_evidence_regions",
+            post(handlers::save_evidence_regions),
+        )
         .layer(from_fn(handlers::cors_middleware))
         .with_state(state);
 

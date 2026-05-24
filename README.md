@@ -18,7 +18,13 @@ curl http://localhost:6333/collections/documents
 ```sh
 curl -X POST "http://localhost:3000/qdrant_evidence_regions" \
      -H "Content-Type: application/json" \
-     -d '{"file_name": "tacl_a_00660.pdf"}'
+     -d '{"file_name": "PH_2016.06.08_Economy-Final.pdf"}'
+```
+
+```sh
+curl -X POST "http://localhost:3000/json_evidence_regions" \
+     -H "Content-Type: application/json" \
+     -d '{"file_name": "PH_2016.06.08_Economy-Final.pdf"}'
 ```
 
 ```sh
@@ -26,4 +32,28 @@ curl -X POST "http://localhost:3000/get_pdf" \
      -H "Content-Type: application/json" \
      -d '{"file_name": "PH_2016.06.08_Economy-Final.pdf"}' \
      -o "downloaded_document.pdf"
+```
+
+```sh
+curl -X POST "http://localhost:3000/get_dataset" \
+     -H "Content-Type: application/json" \
+     -d '{"file_name": "PH_2016.06.08_Economy-Final.pdf"}'
+```
+
+```sh
+curl -i -X POST "http://localhost:3000/save_evidence_regions" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "question_id": "21ba9d55-697f-4e5d-9a87-c50f30256edc",
+       "evidence_regions": [
+         {
+           "region_id": 1,
+           "page": 5,
+           "bbox": [
+             [10.5, 20.0, 110.5, 220.0]
+           ],
+           "type": "paragraph"
+         }
+       ]
+     }'
 ```

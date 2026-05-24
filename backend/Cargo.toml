@@ -23,3 +23,6 @@ md5 = "0.8.0"
 
 # Расширенные функционал футур
 futures-util = "0.3.32"
+
+# uuid
+uuid = { version = "1.23.1", features = ["v4"] }
