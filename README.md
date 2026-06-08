@@ -82,3 +82,28 @@ curl -i -X POST "http://localhost:3000/save_evidence_regions" \
        ]
      }'
 ```
+
+# Evidence Marker - Frontend
+
+Фронтенд для разметки evidence регионов на PDF документах.
+
+## Требования
+
+- Node.js 
+- Запущенный бэкенд сервер на `http://localhost:3000`
+
+## Подготовка к запуску
+
+### 1. Перейти в директирию
+```sh
+cd frontend
+
+### 2. Установить зависимости
+```sh
+npm install
+
+### 3. Запуск
+```sh
+npm run dev
+
+После запуска убедитесь, что frontend запущен на 5173 порте.
