@@ -25,7 +25,7 @@ pub async fn cors_middleware(req: Request<Body>, next: Next) -> Response<Body> {
         let headers = response.headers_mut();
         headers.insert(
             "Access-Control-Allow-Origin",
-            HeaderValue::from_static("http://localhost"),
+            HeaderValue::from_static("http://localhost:5173"),
         );
         headers.insert(
             "Access-Control-Allow-Methods",
@@ -43,7 +43,7 @@ pub async fn cors_middleware(req: Request<Body>, next: Next) -> Response<Body> {
 
     response.headers_mut().insert(
         "Access-Control-Allow-Origin",
-        HeaderValue::from_static("http://localhost"),
+        HeaderValue::from_static("http://localhost:5173"),
     );
 
     response
