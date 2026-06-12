@@ -242,4 +242,7 @@ npm run dev
 
 ---
 
+<img width="2880" height="1550" alt="Снимок экрана от 2026-06-12 11-47-13" src="https://github.com/user-attachments/assets/5a656b53-5ad2-4275-ba36-fd3d7fbef4eb" />
+
+<img width="2880" height="1550" alt="Снимок экрана от 2026-06-12 11-47-24" src="https://github.com/user-attachments/assets/6821cc25-44c3-4c13-b9d6-0371d9c4f2a5" />
 
